@@ -1,75 +1,87 @@
+import os
 import requests
 import google.generativeai as genai
-import elevenlabs
-import os
-import time
-# Set an environment variable
-os.environ["API_KEY"] ='API_KEY'
-genai.configure(api_key=os.environ["API_KEY"])
 
-#function for generating text response
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+# Get API keys from .env
+GEMINI_API_KEY = os.getenv("GEMINI_API")
+ELEVENLABS_API_KEY = os.getenv('ELEVENLABS_API')
+
+# Configure Gemini API
+genai.configure(api_key=GEMINI_API_KEY)
+
+# Function to generate text response
 def generate_text(userinput):
-    model = genai.GenerativeModel ("gemini-1.5-flash")
+    model = genai.GenerativeModel("gemini-1.5-flash")
     try:
         response = model.generate_content(userinput)
         return response.text
     except Exception as e:
-     print(f"error occured in generating text : {e}")
+        print(f"Error occurred in generating text: {e}")
+        return None
 
-#generating voice from text
+# Function to generate voice from text
 def generate_voice(response):
-   elevenlabs_api = "API_KEY"
-   voice_id = "EXAVITQu4vr4xnSDxMaL"
-   #voice_id = "bella"
-   try:
-      url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-      headers = {
-        "xi-api-key": elevenlabs_api,
-        "Content-Type": "application/json"
-      }
-      data = {
-        "text": response,
-        "voice_settings": {
-            "stability": 0.75,
-            "similarity_boost": 0.85
-         }
-      }
-      r = requests.post(url, headers= headers, json = data)
-      #count=0 #count of audio files
-      if r.status_code==200:
-          with open("audiofile.mp3", "wb") as f:
+    voice_id = "EXAVITQu4vr4xnSDxMaL"
+
+    try:
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        headers = {
+            "xi-api-key": ELEVENLABS_API_KEY,
+            "Content-Type": "application/json"
+        }
+        data = {
+            "text": response,
+            "voice_settings": {
+                "stability": 0.75,
+                "similarity_boost": 0.85
+            }
+        }
+
+        r = requests.post(url, headers=headers, json=data)
+
+        if r.status_code == 200:
+            audio_file = "audiofile.mp3"
+            with open(audio_file, "wb") as f:
                 f.write(r.content)
-                print("Audio file generated successfully.")
-                return "audiofile.mp3"
-      else:
-         print(f"error in api {r.status_code}")
-   
-   except Exception as e:
-    print(f"error occured in generating audio : {e}")
+            print("Audio file generated successfully.")
+            return audio_file
+        else:
+            print(f"Error in API call: {r.status_code}")
+            return None
 
+    except Exception as e:
+        print(f"Error occurred in generating audio: {e}")
+        return None
 
+# Main function
 def main():
-   while True:
-      userinput = input("enter your text (type 'exit' to end) :\n ")
+    while True:
+        userinput = input("Enter your text (type 'exit' to end):\n")
+        
 
-      if userinput == "exit":
-         break
-      
-      else:
-        response = generate_text(userinput).strip("*")#generate response text method
-        print("response :")
-        print(response)#print response
-        
-        #generate_voice(response)#generate audio method
-        audio=generate_voice(response)#generate audio method
-        
-        #time.sleep(5)
-        #os.system(f"start {audio}")
-       # time.sleep(2)
-       # os.remove(f"{audio}")  # Remove the audio file after playing
+        if userinput.lower() == "exit":
+            break
 
+        response = generate_text(userinput)
         
-      
+        if response:
+            print("\nResponse:")
+            print(response)
+            
+            # Clean up response text (remove special formatting like asterisks)
+            response_cleaned = response.replace("*", "")
+
+            print(response_cleaned)
+
+            # Generate voice from the cleaned response
+            generate_voice(response_cleaned)
+
+           
 
 if __name__ == "__main__":
-   main()
+    main()
